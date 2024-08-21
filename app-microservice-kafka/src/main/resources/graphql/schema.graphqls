@@ -1,0 +1,14 @@
+type Transaction {
+    id: ID!
+    amount: Int!
+    status: String
+}
+
+type Query {
+    transactionById(id: ID!): Transaction
+    allTransactions: [Transaction!]!
+}
+
+type Mutation {
+    createTransaction(amount: Int!): Transaction
+}
