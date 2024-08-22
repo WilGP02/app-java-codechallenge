@@ -12,8 +12,8 @@ Don't forget that the proper way to submit your work is to fork the repo and cre
 
 # Problem
 
-Every time a financial transaction is created it must be validated by our anti-fraud microservice and then the same service sends a message back to update the transaction status.
-For now, we have only three transaction statuses:
+Every time a financial transactions is created it must be validated by our anti-fraud microservice and then the same service sends a message back to update the transactions status.
+For now, we have only three transactions statuses:
 
 <ol>
   <li>pending</li>
@@ -21,15 +21,15 @@ For now, we have only three transaction statuses:
   <li>rejected</li>  
 </ol>
 
-Every transaction with a value greater than 1000 should be rejected.
+Every transactions with a value greater than 1000 should be rejected.
 
 ```mermaid
   flowchart LR
     Transaction -- Save Transaction with pending Status --> transactionDatabase[(Database)]
-    Transaction --Send transaction Created event--> Anti-Fraud
-    Anti-Fraud -- Send transaction Status Approved event--> Transaction
-    Anti-Fraud -- Send transaction Status Rejected event--> Transaction
-    Transaction -- Update transaction Status event--> transactionDatabase[(Database)]
+    Transaction --Send transactions Created event--> Anti-Fraud
+    Anti-Fraud -- Send transactions Status Approved event--> Transaction
+    Anti-Fraud -- Send transactions Status Rejected event--> Transaction
+    Transaction -- Update transactions Status event--> transactionDatabase[(Database)]
 ```
 
 # Tech Stack
@@ -44,7 +44,7 @@ We do provide a `Dockerfile` to help you get started with a dev environment.
 
 You must have two resources:
 
-1. Resource to create a transaction that must containt:
+1. Resource to create a transactions that must containt:
 
 ```json
 {
@@ -55,7 +55,7 @@ You must have two resources:
 }
 ```
 
-2. Resource to retrieve a transaction
+2. Resource to retrieve a transactions
 
 ```json
 {
@@ -73,7 +73,7 @@ You must have two resources:
 
 ## Optional
 
-You can use any approach to store transaction data but you should consider that we may deal with high volume scenarios where we have a huge amount of writes and reads for the same data at the same time. How would you tackle this requirement?
+You can use any approach to store transactions data but you should consider that we may deal with high volume scenarios where we have a huge amount of writes and reads for the same data at the same time. How would you tackle this requirement?
 
 You can use Graphql;
 

@@ -1,16 +1,18 @@
-package com.yape.reto.tecnico.antifraud.model;
+package com.yape.reto.tecnico.kafka.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Transaction {
+@SuperBuilder
+public class TransactionTypeDto {
     private Long id;
-    private int amount;
-    private String status;
+    private String name;
+
 }

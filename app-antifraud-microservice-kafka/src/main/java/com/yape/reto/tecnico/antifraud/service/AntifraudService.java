@@ -1,8 +1,9 @@
 package com.yape.reto.tecnico.antifraud.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.yape.reto.tecnico.antifraud.model.AntifraudResponse;
-import com.yape.reto.tecnico.antifraud.model.Transaction;
+import com.yape.reto.tecnico.antifraud.model.TransactionMessage;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.kafka.receiver.KafkaReceiver;
@@ -24,6 +25,7 @@ public class AntifraudService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AntifraudService() {
+        objectMapper.registerModule(new JavaTimeModule());
         Map<String, Object> props = new HashMap<>();
         props.put("bootstrap.servers", "localhost:9092");
         props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
@@ -41,8 +43,8 @@ public class AntifraudService {
 
         this.kafkaReceiver.receive()
                 .flatMap(record -> {
-                    Transaction transaction = deserializeTransaction(record.value());
-                    return analyzeTransaction(transaction)
+                    TransactionMessage transactionMessage = deserializeTransaction(record.value());
+                    return analyzeTransaction(transactionMessage)
                             .then(record.receiverOffset().commit());
                 })
                 .doOnError(e -> {
@@ -51,19 +53,19 @@ public class AntifraudService {
                 .subscribe();
     }
 
-    private Transaction deserializeTransaction(String json) {
+    private TransactionMessage deserializeTransaction(String json) {
         try {
-            return objectMapper.readValue(json, Transaction.class);
+            return objectMapper.readValue(json, TransactionMessage.class);
         } catch (Exception e) {
             throw new RuntimeException("Failed to deserialize transaction", e);
         }
     }
 
-    private Mono<Void> analyzeTransaction(Transaction transaction) {
-        boolean isFraudulent = transaction.getAmount() > 1000;
+    private Mono<Void> analyzeTransaction(TransactionMessage transactions) {
+        boolean isFraudulent = transactions.getAmount() > 1000;
 
         AntifraudResponse response = new AntifraudResponse();
-        response.setTransactionId(transaction.getId());
+        response.setTransactionId(transactions.getTransactionExternalId());
         response.setFraudulent(isFraudulent);
 
         return publishAntifraudResponse(response);

@@ -4,14 +4,16 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.util.UUID;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class AntifraudResponse {
-    private UUID transactionId;
-    private boolean isFraudulent;
+@SuperBuilder
+public class TransactionStatusDto {
+
+    private Long id;
+    private String name;
+
 }

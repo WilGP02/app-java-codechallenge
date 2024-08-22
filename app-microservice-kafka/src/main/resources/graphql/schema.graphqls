@@ -1,7 +1,27 @@
+input TransactionRequest {
+    accountExternalIdDebit: String!
+    accountExternalIdCredit: String!
+    tranferTypeId: Int!
+    amount: Float!
+}
+
 type Transaction {
     id: ID!
-    amount: Int!
-    status: String
+    amount: Float!
+    accountExternalIdDebit: String
+    accountExternalIdCredit: String
+    transactionType: TransactionType
+    transactionStatus: TransactionStatus
+}
+
+type TransactionType {
+    id: ID!
+    name: String
+}
+
+type TransactionStatus {
+    id: ID!
+    name: String
 }
 
 type Query {
@@ -10,5 +30,5 @@ type Query {
 }
 
 type Mutation {
-    createTransaction(amount: Int!): Transaction
+    createTransaction(input: TransactionRequest!): Transaction
 }

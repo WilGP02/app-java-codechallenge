@@ -1,9 +1,20 @@
 package com.yape.reto.tecnico.kafka.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.yape.reto.tecnico.kafka.entity.Transactions;
 import com.yape.reto.tecnico.kafka.model.AntifraudResponse;
-import com.yape.reto.tecnico.kafka.model.Transaction;
+import com.yape.reto.tecnico.kafka.model.TransactionMessage;
+import com.yape.reto.tecnico.kafka.model.TransactionRequest;
+import com.yape.reto.tecnico.kafka.entity.TransactionStatus;
+import com.yape.reto.tecnico.kafka.entity.TransactionType;
+import com.yape.reto.tecnico.kafka.model.TransactionStatusDto;
+import com.yape.reto.tecnico.kafka.model.TransactionTypeDto;
 import com.yape.reto.tecnico.kafka.repository.TransactionRepository;
+import com.yape.reto.tecnico.kafka.repository.TransactionStatusRepository;
+import com.yape.reto.tecnico.kafka.repository.TransactionTypeRepository;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -13,20 +24,32 @@ import reactor.kafka.sender.KafkaSender;
 import reactor.kafka.sender.SenderOptions;
 import reactor.kafka.sender.SenderRecord;
 
+import javax.transaction.Transactional;
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
+@Log4j2
 @Service
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final TransactionStatusRepository transactionStatusRepository;
+    private final TransactionTypeRepository transactionTypeRepository;
     private final KafkaSender<String, String> kafkaSender;
     private final KafkaReceiver<String, String> kafkaReceiver;
     private final String topicName = "transaction-created";
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public TransactionService(TransactionRepository transactionRepository) {
+
+    public TransactionService(TransactionRepository transactionRepository, TransactionStatusRepository transactionStatusRepository,
+                              TransactionTypeRepository transactionTypeRepository) {
         this.transactionRepository = transactionRepository;
+        this.transactionStatusRepository = transactionStatusRepository;
+        this.transactionTypeRepository = transactionTypeRepository;
+        objectMapper.registerModule(new JavaTimeModule());
 
         Map<String, Object> props = new HashMap<>();
         props.put("bootstrap.servers", "localhost:9092");
@@ -57,48 +80,73 @@ public class TransactionService {
         }
     }
 
-    public Mono<Transaction> createTransaction(int amount) {
-        Transaction transaction = new Transaction(amount, "PENDING");
-        Transaction savedTransaction = transactionRepository.save(transaction);
+    @Transactional
+    public Mono<Transactions> createTransaction(TransactionRequest request) {
+        TransactionStatus transactionStatus = transactionStatusRepository.findById(1L).get();
+        TransactionType transactionType = transactionTypeRepository.findById(request.getTranferTypeId()).get();
 
-        return publishTransactionEvent(savedTransaction).thenReturn(savedTransaction);
+        Transactions savedTransactions = transactionRepository.save(Transactions
+                .builder()
+                        .accountExternalIdCredit(request.getAccountExternalIdCredit())
+                        .accountExternalIdDebit(request.getAccountExternalIdDebit())
+                        .transactionStatus(transactionStatus)
+                        .transactionType(transactionType)
+                        .amount(request.getAmount())
+                .build());
+
+        TransactionMessage transactionMessage = TransactionMessage
+                .builder()
+                .transactionExternalId(savedTransactions.getId())
+                .transactionStatus(TransactionStatusDto.builder().name(savedTransactions.getTransactionStatus().getName()).build())
+                .transactionType(TransactionTypeDto.builder().name(savedTransactions.getTransactionType().getName()).build())
+                .amount(savedTransactions.getAmount())
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        return publishTransactionEvent(transactionMessage)
+                .thenReturn(savedTransactions);
     }
 
     private Mono<Void> handleAntifraudResponse(AntifraudResponse response) {
         return Mono.just(response)
                 .flatMap(r -> {
                     return Mono.justOrEmpty(transactionRepository.findById(r.getTransactionId()))
-                            .flatMap(transaction -> {
+                            .flatMap(transactions -> {
                                 if (r.isFraudulent()) {
-                                    transaction.setStatus("REJECTED");
+                                    TransactionStatus transactionStatus = transactionStatusRepository.findById(3L).get();
+                                    transactions.setTransactionStatus(transactionStatus);
                                 } else {
-                                    transaction.setStatus("APPROVED");
+                                    TransactionStatus transactionStatus = transactionStatusRepository.findById(2L).get();
+                                    transactions.setTransactionStatus(transactionStatus);
                                 }
-                                transactionRepository.save(transaction);
+                                transactionRepository.save(transactions);
                                 return Mono.empty();
                             });
                 });
     }
 
-    public Mono<Transaction> getTransaction(Long id) {
+    public Mono<Transactions> getTransaction(UUID id) {
         return Mono.justOrEmpty(transactionRepository.findById(id));
     }
 
-    public Flux<Transaction> getAllTransactions() {
+    public Flux<Transactions> getAllTransactions() {
         return Flux.fromIterable(transactionRepository.findAll());
     }
 
-    private Mono<Void> publishTransactionEvent(Transaction transaction) {
-        return Mono.just(transaction)
+    private Mono<Void> publishTransactionEvent(TransactionMessage transactionMessage) {
+        return Mono.just(transactionMessage)
                 .map(t -> {
                     try {
+                        log.info("1Publicación exitosa de transactionMessage: {} ",  objectMapper.writeValueAsString(t));
                         return objectMapper.writeValueAsString(t);
                     } catch (Exception e) {
                         throw new RuntimeException("Failed to serialize transaction", e);
                     }
                 })
                 .flatMap(jsonTransaction -> {
-                    SenderRecord<String, String, String> senderRecord = SenderRecord.create(topicName, null, null, transaction.getId().toString(), jsonTransaction, null);
+                    log.info("2Publicación exitosa de transactionMessage: {} ",  jsonTransaction);
+                    SenderRecord<String, String, String> senderRecord = SenderRecord.create(topicName, null,
+                            null, transactionMessage.getTransactionExternalId().toString(), jsonTransaction, null);
                     return kafkaSender.send(Mono.just(senderRecord)).then();
                 });
     }

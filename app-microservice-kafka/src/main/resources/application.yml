@@ -5,10 +5,18 @@ spring:
     username: sa
     password: password
   jpa:
+    hibernate:
+      ddl-auto: create-drop
     database-platform: org.hibernate.dialect.H2Dialect
+    defer-datasource-initialization: true
   h2:
     console:
       enabled: true
+      path: /h2-console
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:query.sql
 
 server:
   port: 8080
