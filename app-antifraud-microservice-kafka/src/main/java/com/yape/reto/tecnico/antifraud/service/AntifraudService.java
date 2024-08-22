@@ -27,7 +27,7 @@ public class AntifraudService {
     public AntifraudService() {
         objectMapper.registerModule(new JavaTimeModule());
         Map<String, Object> props = new HashMap<>();
-        props.put("bootstrap.servers", "localhost:9092");
+        props.put("bootstrap.servers", "kafka:29092");
         props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.put("auto.offset.reset", "earliest");

@@ -17,6 +17,8 @@ spring:
     init:
       mode: always
       data-locations: classpath:query.sql
+  kafka:
+    bootstrap-servers: kafka:9092
 
 server:
   port: 8080

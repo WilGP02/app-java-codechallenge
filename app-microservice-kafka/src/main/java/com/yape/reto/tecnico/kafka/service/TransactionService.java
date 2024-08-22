@@ -52,7 +52,7 @@ public class TransactionService {
         objectMapper.registerModule(new JavaTimeModule());
 
         Map<String, Object> props = new HashMap<>();
-        props.put("bootstrap.servers", "localhost:9092");
+        props.put("bootstrap.servers", "kafka:29092");
         props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         SenderOptions<String, String> senderOptions = SenderOptions.create(props);

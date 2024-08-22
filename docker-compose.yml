@@ -32,3 +32,21 @@ services:
     depends_on:
       - zookeeper
       - kafka
+  app-microservice:
+    build:
+      context: ./app-microservice-kafka
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - kafka
+
+  app-antifraud:
+    build:
+      context: ./app-antifraud-microservice-kafka
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    depends_on:
+      - kafka
